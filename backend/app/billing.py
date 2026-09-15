@@ -1,3 +1,4 @@
+import math
 from datetime import datetime
 
 import stripe
@@ -22,8 +23,9 @@ def is_subscription_active(user: User) -> bool:
 def dias_restantes_trial(user: User) -> int | None:
     if user.status_assinatura != StatusAssinatura.trial or not user.trial_fim:
         return None
-    restantes = (user.trial_fim - datetime.utcnow()).days
-    return max(restantes, 0)
+    segundos_restantes = (user.trial_fim - datetime.utcnow()).total_seconds()
+    dias = math.ceil(segundos_restantes / 86400)
+    return max(dias, 0)
 
 
 def create_checkout_session(db: Session, user: User) -> str:
