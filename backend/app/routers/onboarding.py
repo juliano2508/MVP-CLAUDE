@@ -1,12 +1,19 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from datetime import date, datetime, timedelta
+
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.deps import get_current_user
-from app.models import AvailabilitySlot, BusinessPage, Service, User
+from app.models import Appointment, AvailabilitySlot, BlockedSlot, BusinessPage, Service, StatusAppointment, User
+from app.scheduling import is_slot_available
 from app.schemas import (
+    AppointmentOut,
+    AppointmentReschedule,
     AvailabilitySlotCreate,
     AvailabilitySlotOut,
+    BlockedSlotCreate,
+    BlockedSlotOut,
     BusinessPageCreate,
     BusinessPageOut,
     BusinessPageUpdate,
@@ -193,4 +200,135 @@ def delete_availability_slot(
             status_code=status.HTTP_404_NOT_FOUND, detail="Disponibilidade não encontrada"
         )
     db.delete(slot)
+    db.commit()
+
+
+# ---- Appointments (Fluxo 3 - painel do profissional) ----
+
+
+@router.get("/appointments", response_model=list[AppointmentOut])
+def list_appointments(
+    de: date | None = Query(default=None, description="Filtra agendamentos a partir desta data"),
+    ate: date | None = Query(default=None, description="Filtra agendamentos até esta data"),
+    status_filtro: StatusAppointment | None = Query(default=None, alias="status"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    page = _get_owned_business_page(db, current_user)
+    query = db.query(Appointment).filter(Appointment.business_page_id == page.id)
+    if de is not None:
+        query = query.filter(Appointment.data >= de)
+    if ate is not None:
+        query = query.filter(Appointment.data <= ate)
+    if status_filtro is not None:
+        query = query.filter(Appointment.status == status_filtro)
+    return query.order_by(Appointment.data, Appointment.hora_inicio).all()
+
+
+def _get_owned_appointment(db: Session, current_user: User, appointment_id: int) -> Appointment:
+    page = _get_owned_business_page(db, current_user)
+    appointment = (
+        db.query(Appointment)
+        .filter(Appointment.id == appointment_id, Appointment.business_page_id == page.id)
+        .first()
+    )
+    if appointment is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Agendamento não encontrado")
+    return appointment
+
+
+@router.patch("/appointments/{appointment_id}/cancel", response_model=AppointmentOut)
+def cancel_appointment(
+    appointment_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    appointment = _get_owned_appointment(db, current_user, appointment_id)
+    if appointment.status == StatusAppointment.cancelado:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Agendamento já está cancelado")
+    appointment.status = StatusAppointment.cancelado
+    db.commit()
+    db.refresh(appointment)
+    return appointment
+
+
+@router.patch("/appointments/{appointment_id}/reschedule", response_model=AppointmentOut)
+def reschedule_appointment(
+    appointment_id: int,
+    payload: AppointmentReschedule,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    page = _get_owned_business_page(db, current_user)
+    appointment = _get_owned_appointment(db, current_user, appointment_id)
+    if appointment.status == StatusAppointment.cancelado:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Não é possível remarcar um agendamento cancelado"
+        )
+
+    service = db.query(Service).filter(Service.id == appointment.service_id).first()
+    if not is_slot_available(
+        db, page, service, payload.data, payload.hora_inicio, exclude_appointment_id=appointment.id
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Horário não está disponível. Escolha outro horário.",
+        )
+
+    start_dt = datetime.combine(payload.data, payload.hora_inicio)
+    end_dt = start_dt + timedelta(minutes=service.duracao_minutos)
+
+    appointment.data = payload.data
+    appointment.hora_inicio = payload.hora_inicio
+    appointment.hora_fim = end_dt.time()
+    db.commit()
+    db.refresh(appointment)
+    return appointment
+
+
+# ---- Blocked slots (bloqueio manual de horários) ----
+
+
+@router.post("/blocked-slots", response_model=BlockedSlotOut, status_code=status.HTTP_201_CREATED)
+def create_blocked_slot(
+    payload: BlockedSlotCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    if payload.hora_inicio >= payload.hora_fim:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="hora_inicio deve ser anterior a hora_fim",
+        )
+    page = _get_owned_business_page(db, current_user)
+    blocked = BlockedSlot(business_page_id=page.id, **payload.model_dump())
+    db.add(blocked)
+    db.commit()
+    db.refresh(blocked)
+    return blocked
+
+
+@router.get("/blocked-slots", response_model=list[BlockedSlotOut])
+def list_blocked_slots(
+    db: Session = Depends(get_db), current_user: User = Depends(get_current_user)
+):
+    page = _get_owned_business_page(db, current_user)
+    return sorted(page.blocked_slots, key=lambda b: (b.data, b.hora_inicio))
+
+
+@router.delete("/blocked-slots/{blocked_slot_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_blocked_slot(
+    blocked_slot_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    page = _get_owned_business_page(db, current_user)
+    blocked = (
+        db.query(BlockedSlot)
+        .filter(BlockedSlot.id == blocked_slot_id, BlockedSlot.business_page_id == page.id)
+        .first()
+    )
+    if blocked is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Bloqueio não encontrado")
+    db.delete(blocked)
     db.commit()

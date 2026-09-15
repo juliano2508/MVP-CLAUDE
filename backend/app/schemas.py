@@ -140,5 +140,34 @@ class AppointmentOut(BaseModel):
     cliente_telefone: str
     cliente_email: EmailStr
     status: StatusAppointment
+    criado_em: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+# ---- Appointment management (Fluxo 3 - painel do profissional) ----
+
+
+class AppointmentReschedule(BaseModel):
+    data: date
+    hora_inicio: time
+
+
+# ---- BlockedSlot ----
+
+
+class BlockedSlotCreate(BaseModel):
+    data: date
+    hora_inicio: time
+    hora_fim: time
+    motivo: str | None = Field(default=None, max_length=255)
+
+
+class BlockedSlotOut(BaseModel):
+    id: int
+    data: date
+    hora_inicio: time
+    hora_fim: time
+    motivo: str | None
 
     model_config = ConfigDict(from_attributes=True)

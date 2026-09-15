@@ -9,7 +9,13 @@ def _intervals_overlap(start_a: time, end_a: time, start_b: time, end_b: time) -
     return start_a < end_b and start_b < end_a
 
 
-def compute_available_slots(db: Session, page: BusinessPage, service: Service, target_date: date) -> list[time]:
+def compute_available_slots(
+    db: Session,
+    page: BusinessPage,
+    service: Service,
+    target_date: date,
+    exclude_appointment_id: int | None = None,
+) -> list[time]:
     if target_date < date.today():
         return []
 
@@ -22,15 +28,14 @@ def compute_available_slots(db: Session, page: BusinessPage, service: Service, t
     if not availability_slots:
         return []
 
-    appointments = (
-        db.query(Appointment)
-        .filter(
-            Appointment.business_page_id == page.id,
-            Appointment.data == target_date,
-            Appointment.status != StatusAppointment.cancelado,
-        )
-        .all()
+    appointments_query = db.query(Appointment).filter(
+        Appointment.business_page_id == page.id,
+        Appointment.data == target_date,
+        Appointment.status != StatusAppointment.cancelado,
     )
+    if exclude_appointment_id is not None:
+        appointments_query = appointments_query.filter(Appointment.id != exclude_appointment_id)
+    appointments = appointments_query.all()
     blocked_slots = (
         db.query(BlockedSlot)
         .filter(BlockedSlot.business_page_id == page.id, BlockedSlot.data == target_date)
@@ -60,5 +65,12 @@ def compute_available_slots(db: Session, page: BusinessPage, service: Service, t
     return sorted(slots)
 
 
-def is_slot_available(db: Session, page: BusinessPage, service: Service, target_date: date, start_time: time) -> bool:
-    return start_time in compute_available_slots(db, page, service, target_date)
+def is_slot_available(
+    db: Session,
+    page: BusinessPage,
+    service: Service,
+    target_date: date,
+    start_time: time,
+    exclude_appointment_id: int | None = None,
+) -> bool:
+    return start_time in compute_available_slots(db, page, service, target_date, exclude_appointment_id)

@@ -6,7 +6,8 @@ especificação completa em [`docs/mvp-site-agenda-autonomos.md`](docs/mvp-site-
 ## Status
 
 Backend inicial (FastAPI + SQLite) implementado, cobrindo os **Fluxo 1
-(onboarding do profissional)** e **Fluxo 2 (cliente agenda)**:
+(onboarding do profissional)**, **Fluxo 2 (cliente agenda)** e **Fluxo 3
+(profissional gerencia)**:
 
 - Cadastro/login do profissional (JWT), com trial de 14 dias
 - Criação/edição da página pública do negócio (slug gerado automaticamente)
@@ -19,10 +20,13 @@ Backend inicial (FastAPI + SQLite) implementado, cobrindo os **Fluxo 1
   conflito (409 se o horário não estiver mais livre) — `POST /p/{slug}/appointments`
 - Email de confirmação do agendamento (via SMTP se configurado; caso
   contrário, é apenas logado — útil para desenvolvimento local)
+- Painel do profissional: listar agendamentos com filtro por período/status,
+  cancelar, remarcar (com a mesma checagem de conflito, ignorando o próprio
+  agendamento) — `GET/PATCH /me/business-page/appointments/...`
+- Bloqueio manual de horários (folga, compromisso) — `/me/business-page/blocked-slots`
 
-Os demais fluxos (painel de gestão de agendamentos do profissional e
-cobrança/assinatura) ainda não foram implementados — ver seção 8 do
-documento de especificação para o roadmap.
+O fluxo restante (cobrança/assinatura via Stripe ou Mercado Pago) ainda não
+foi implementado — ver seção 8 do documento de especificação para o roadmap.
 
 ## Backend
 
@@ -42,7 +46,8 @@ backend/
     notifications.py        # email de confirmação de agendamento
     routers/
       auth.py              # /auth/register, /auth/login, /auth/me
-      onboarding.py         # /me/business-page (+ /services, /availability)
+      onboarding.py         # /me/business-page (+ /services, /availability,
+                             #   /appointments, /blocked-slots)
       public.py               # /p/{slug}, available-slots, appointments
 ```
 
@@ -99,12 +104,26 @@ curl "localhost:8000/p/manu-cartomancia/services/1/available-slots?data=2026-01-
 curl -X POST localhost:8000/p/manu-cartomancia/appointments \
   -H "Content-Type: application/json" \
   -d '{"service_id":1,"data":"2026-01-20","hora_inicio":"09:00:00","cliente_nome":"Cliente","cliente_telefone":"11999999999","cliente_email":"cliente@example.com"}'
+
+# 9. painel: listar agendamentos (opcionalmente filtrado por ?de=&ate=&status=)
+curl localhost:8000/me/business-page/appointments -H "Authorization: Bearer TOKEN"
+
+# 10. painel: cancelar um agendamento
+curl -X PATCH localhost:8000/me/business-page/appointments/1/cancel -H "Authorization: Bearer TOKEN"
+
+# 11. painel: remarcar um agendamento
+curl -X PATCH localhost:8000/me/business-page/appointments/1/reschedule -H "Authorization: Bearer TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"data":"2026-01-21","hora_inicio":"10:00:00"}'
+
+# 12. painel: bloquear um horário manualmente (folga, compromisso)
+curl -X POST localhost:8000/me/business-page/blocked-slots -H "Authorization: Bearer TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"data":"2026-01-21","hora_inicio":"12:00:00","hora_fim":"13:00:00","motivo":"Almoço"}'
 ```
 
 ## Próximos passos
 
-1. **Fluxo 3** — painel do profissional: listar/cancelar/remarcar
-   agendamentos, criar `BlockedSlot`.
-2. **Fluxo 4** — integração de cobrança (Stripe/Mercado Pago) e expiração de
+1. **Fluxo 4** — integração de cobrança (Stripe/Mercado Pago) e expiração de
    trial.
-3. Frontend (React + Vite + Tailwind) consumindo esta API.
+2. Frontend (React + Vite + Tailwind) consumindo esta API.
