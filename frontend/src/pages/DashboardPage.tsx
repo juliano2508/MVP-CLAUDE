@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { useAuth } from '../lib/auth'
+import { SubscriptionBanner } from '../components/SubscriptionBanner'
 import {
   ApiError,
   cancelAppointment,
@@ -36,6 +37,9 @@ export function DashboardPage() {
   return (
     <div className="mx-auto max-w-3xl px-4 py-10">
       <h1 className="text-2xl font-semibold text-gray-900">Painel de agendamentos</h1>
+      <div className="mt-6">
+        <SubscriptionBanner />
+      </div>
       <AppointmentsSection token={token!} />
       <BlockedSlotsSection token={token!} />
     </div>

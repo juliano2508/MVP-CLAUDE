@@ -3,6 +3,7 @@ from datetime import date, datetime, time, timedelta
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
+from app.billing import is_subscription_active
 from app.database import get_db
 from app.models import Appointment, BusinessPage, Service
 from app.notifications import send_appointment_confirmation
@@ -16,6 +17,11 @@ def _get_business_page(db: Session, slug: str) -> BusinessPage:
     page = db.query(BusinessPage).filter(BusinessPage.slug == slug).first()
     if page is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Página não encontrada")
+    if not is_subscription_active(page.user):
+        raise HTTPException(
+            status_code=status.HTTP_402_PAYMENT_REQUIRED,
+            detail="Esta página está temporariamente indisponível.",
+        )
     return page
 
 

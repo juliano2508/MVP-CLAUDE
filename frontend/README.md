@@ -23,11 +23,13 @@ src/
   components/
     Navbar.tsx
     ProtectedRoute.tsx  # redireciona para /login quando não autenticado
+    SubscriptionBanner.tsx  # aviso de trial acabando / assinatura inativa
   pages/
     LandingPage.tsx           # marketing
     LoginPage.tsx / RegisterPage.tsx
     BusinessPageEditorPage.tsx  # onboarding + edição contínua (dados, serviços, disponibilidade)
     DashboardPage.tsx           # painel do profissional (agendamentos + bloqueios manuais)
+    BillingPage.tsx             # /painel/assinatura — assinar/cancelar, status do trial
     PublicBusinessPage.tsx      # /p/:slug — página pública vista pelo cliente
     BookingPage.tsx             # /p/:slug/agendar/:serviceId — calendário + formulário do cliente
     ConfirmationPage.tsx        # /p/:slug/confirmado
@@ -40,7 +42,3 @@ src/
 - `npm run lint` — oxlint
 - `npm run preview` — pré-visualiza o build de produção
 
-## Pendente
-
-A tela de configurações de assinatura/pagamento (Fluxo 4) ainda não existe,
-pois o backend correspondente também não foi implementado.

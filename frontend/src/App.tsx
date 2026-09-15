@@ -7,6 +7,7 @@ import { LoginPage } from './pages/LoginPage'
 import { RegisterPage } from './pages/RegisterPage'
 import { BusinessPageEditorPage } from './pages/BusinessPageEditorPage'
 import { DashboardPage } from './pages/DashboardPage'
+import { BillingPage } from './pages/BillingPage'
 import { PublicBusinessPage } from './pages/PublicBusinessPage'
 import { BookingPage } from './pages/BookingPage'
 import { ConfirmationPage } from './pages/ConfirmationPage'
@@ -37,6 +38,14 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <BusinessPageEditorPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/painel/assinatura"
+                element={
+                  <ProtectedRoute>
+                    <BillingPage />
                   </ProtectedRoute>
                 }
               />

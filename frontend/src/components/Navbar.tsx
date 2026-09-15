@@ -25,6 +25,9 @@ export function Navbar() {
               <Link to="/painel/pagina" className="text-gray-600 hover:text-brand-700">
                 Minha página
               </Link>
+              <Link to="/painel/assinatura" className="text-gray-600 hover:text-brand-700">
+                Assinatura
+              </Link>
               {user && <span className="hidden text-gray-400 sm:inline">{user.nome}</span>}
               <button
                 onClick={handleLogout}

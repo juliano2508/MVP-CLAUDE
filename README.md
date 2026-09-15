@@ -5,9 +5,10 @@ especificação completa em [`docs/mvp-site-agenda-autonomos.md`](docs/mvp-site-
 
 ## Status
 
-Backend inicial (FastAPI + SQLite) implementado, cobrindo os **Fluxo 1
-(onboarding do profissional)**, **Fluxo 2 (cliente agenda)** e **Fluxo 3
-(profissional gerencia)**:
+Backend inicial (FastAPI + SQLite) implementado, cobrindo os 4 fluxos
+principais do MVP: **Fluxo 1 (onboarding do profissional)**, **Fluxo 2
+(cliente agenda)**, **Fluxo 3 (profissional gerencia)** e **Fluxo 4
+(cobrança/assinatura)**:
 
 - Cadastro/login do profissional (JWT), com trial de 14 dias
 - Criação/edição da página pública do negócio (slug gerado automaticamente)
@@ -24,14 +25,24 @@ Backend inicial (FastAPI + SQLite) implementado, cobrindo os **Fluxo 1
   cancelar, remarcar (com a mesma checagem de conflito, ignorando o próprio
   agendamento) — `GET/PATCH /me/business-page/appointments/...`
 - Bloqueio manual de horários (folga, compromisso) — `/me/business-page/blocked-slots`
+- Assinatura via Stripe (`GET /billing/status`, `POST /billing/checkout`,
+  `POST /billing/cancel`, `POST /billing/webhook`): trial de 14 dias
+  (já criado no cadastro), e a página pública fica indisponível (`402`)
+  quando o trial expira e não há assinatura ativa. **Modo demo**: se
+  `STRIPE_SECRET_KEY`/`STRIPE_PRICE_ID` não estiverem configurados,
+  assinar/cancelar mudam o status na hora, sem chamada real ao Stripe —
+  útil para desenvolver e testar sem uma conta Stripe.
 
 Frontend (React + Vite + Tailwind) implementado cobrindo as mesmas telas:
 landing, cadastro/login, onboarding + edição da página, painel do
-profissional e o fluxo público de agendamento (página pública → escolher
-serviço/horário → confirmação). Testado de ponta a ponta no navegador.
+profissional, tela de assinatura (com banner de aviso quando o trial está
+acabando ou a assinatura está inativa) e o fluxo público de agendamento
+(página pública → escolher serviço/horário → confirmação). Testado de
+ponta a ponta no navegador, incluindo o ciclo assinar → cancelar → página
+pública bloqueada → assinar de novo → página pública volta a funcionar.
 
-O fluxo restante (cobrança/assinatura via Stripe ou Mercado Pago) ainda não
-foi implementado — ver seção 8 do documento de especificação para o roadmap.
+Os 4 fluxos do escopo do MVP (seção 3 da especificação) estão implementados.
+Ver seção 8 do documento de especificação para ideias de roadmap pós-MVP.
 
 ## Backend
 
@@ -49,11 +60,13 @@ backend/
     utils.py              # geração de slug único
     scheduling.py          # cálculo de horários livres (Fluxo 2)
     notifications.py        # email de confirmação de agendamento
+    billing.py                # assinatura via Stripe (ou modo demo) (Fluxo 4)
     routers/
       auth.py              # /auth/register, /auth/login, /auth/me
       onboarding.py         # /me/business-page (+ /services, /availability,
                              #   /appointments, /blocked-slots)
       public.py               # /p/{slug}, available-slots, appointments
+      billing.py                # /billing/status, /checkout, /cancel, /webhook
 ```
 
 ### Rodando localmente
@@ -125,6 +138,16 @@ curl -X PATCH localhost:8000/me/business-page/appointments/1/reschedule -H "Auth
 curl -X POST localhost:8000/me/business-page/blocked-slots -H "Authorization: Bearer TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"data":"2026-01-21","hora_inicio":"12:00:00","hora_fim":"13:00:00","motivo":"Almoço"}'
+
+# 13. ver status da assinatura (plano, trial, dias restantes)
+curl localhost:8000/billing/status -H "Authorization: Bearer TOKEN"
+
+# 14. assinar (em modo demo, ativa na hora; com Stripe configurado, retorna
+#     a URL do Checkout para redirecionar o navegador)
+curl -X POST localhost:8000/billing/checkout -H "Authorization: Bearer TOKEN"
+
+# 15. cancelar assinatura
+curl -X POST localhost:8000/billing/cancel -H "Authorization: Bearer TOKEN"
 ```
 
 ## Frontend
@@ -142,7 +165,9 @@ npm run dev
 O frontend sobe em `http://127.0.0.1:5173` e espera o backend rodando em
 `http://127.0.0.1:8000` (ajustável via `VITE_API_URL`).
 
-## Próximos passos
+## Próximos passos (roadmap pós-MVP)
 
-1. **Fluxo 4** — integração de cobrança (Stripe/Mercado Pago), expiração de
-   trial e a tela de configurações de assinatura correspondente no frontend.
+Ver seção 8 do documento de especificação: notificações via WhatsApp,
+pagamento do serviço no ato do agendamento, múltiplos profissionais por
+conta, app mobile, editor visual mais flexível, lembretes automáticos e
+avaliações de clientes.

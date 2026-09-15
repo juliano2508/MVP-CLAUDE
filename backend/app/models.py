@@ -60,6 +60,9 @@ class User(Base):
     )
     trial_fim: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
+    stripe_customer_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    stripe_subscription_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
+
     business_page: Mapped["BusinessPage | None"] = relationship(
         back_populates="user", uselist=False, cascade="all, delete-orphan"
     )

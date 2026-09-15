@@ -31,6 +31,21 @@ class Token(BaseModel):
     token_type: str = "bearer"
 
 
+# ---- Billing (Fluxo 4 - assinatura) ----
+
+
+class BillingStatusOut(BaseModel):
+    plano: Plano
+    status_assinatura: StatusAssinatura
+    trial_fim: datetime | None
+    dias_restantes_trial: int | None
+    assinatura_ativa: bool
+
+
+class CheckoutSessionOut(BaseModel):
+    checkout_url: str
+
+
 # ---- BusinessPage ----
 
 

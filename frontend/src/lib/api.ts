@@ -121,6 +121,14 @@ export interface PublicBusinessPage {
   services: Service[]
 }
 
+export interface BillingStatus {
+  plano: Plano
+  status_assinatura: StatusAssinatura
+  trial_fim: string | null
+  dias_restantes_trial: number | null
+  assinatura_ativa: boolean
+}
+
 // ---- Auth ----
 
 export function register(nome: string, email: string, senha: string) {
@@ -286,6 +294,20 @@ export function deleteBlockedSlot(token: string, blockedSlotId: number) {
     method: 'DELETE',
     token,
   })
+}
+
+// ---- Billing (Fluxo 4 - assinatura) ----
+
+export function getBillingStatus(token: string) {
+  return request<BillingStatus>('/billing/status', { token })
+}
+
+export function createCheckoutSession(token: string) {
+  return request<{ checkout_url: string }>('/billing/checkout', { method: 'POST', token })
+}
+
+export function cancelSubscription(token: string) {
+  return request<BillingStatus>('/billing/cancel', { method: 'POST', token })
 }
 
 // ---- Public (cliente final, sem login) ----
