@@ -25,6 +25,11 @@ Backend inicial (FastAPI + SQLite) implementado, cobrindo os **Fluxo 1
   agendamento) — `GET/PATCH /me/business-page/appointments/...`
 - Bloqueio manual de horários (folga, compromisso) — `/me/business-page/blocked-slots`
 
+Frontend (React + Vite + Tailwind) implementado cobrindo as mesmas telas:
+landing, cadastro/login, onboarding + edição da página, painel do
+profissional e o fluxo público de agendamento (página pública → escolher
+serviço/horário → confirmação). Testado de ponta a ponta no navegador.
+
 O fluxo restante (cobrança/assinatura via Stripe ou Mercado Pago) ainda não
 foi implementado — ver seção 8 do documento de especificação para o roadmap.
 
@@ -122,8 +127,22 @@ curl -X POST localhost:8000/me/business-page/blocked-slots -H "Authorization: Be
   -d '{"data":"2026-01-21","hora_inicio":"12:00:00","hora_fim":"13:00:00","motivo":"Almoço"}'
 ```
 
+## Frontend
+
+Ver [`frontend/README.md`](frontend/README.md) para estrutura e instruções
+de execução. Resumo:
+
+```bash
+cd frontend
+npm install
+cp .env.example .env   # ajuste VITE_API_URL se necessário
+npm run dev
+```
+
+O frontend sobe em `http://127.0.0.1:5173` e espera o backend rodando em
+`http://127.0.0.1:8000` (ajustável via `VITE_API_URL`).
+
 ## Próximos passos
 
-1. **Fluxo 4** — integração de cobrança (Stripe/Mercado Pago) e expiração de
-   trial.
-2. Frontend (React + Vite + Tailwind) consumindo esta API.
+1. **Fluxo 4** — integração de cobrança (Stripe/Mercado Pago), expiração de
+   trial e a tela de configurações de assinatura correspondente no frontend.
