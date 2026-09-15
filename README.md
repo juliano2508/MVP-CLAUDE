@@ -5,18 +5,24 @@ especificação completa em [`docs/mvp-site-agenda-autonomos.md`](docs/mvp-site-
 
 ## Status
 
-Backend inicial (FastAPI + SQLite) implementado, cobrindo o **Fluxo 1
-(onboarding do profissional)**:
+Backend inicial (FastAPI + SQLite) implementado, cobrindo os **Fluxo 1
+(onboarding do profissional)** e **Fluxo 2 (cliente agenda)**:
 
 - Cadastro/login do profissional (JWT), com trial de 14 dias
 - Criação/edição da página pública do negócio (slug gerado automaticamente)
 - Cadastro de serviços (nome, duração, preço)
 - Definição de disponibilidade semanal
 - Página pública somente leitura (`GET /p/{slug}`)
+- Cálculo de horários livres por serviço/data (disponibilidade menos
+  agendamentos já feitos menos bloqueios) — `GET /p/{slug}/services/{id}/available-slots`
+- Agendamento pelo cliente final sem precisar criar conta, com checagem de
+  conflito (409 se o horário não estiver mais livre) — `POST /p/{slug}/appointments`
+- Email de confirmação do agendamento (via SMTP se configurado; caso
+  contrário, é apenas logado — útil para desenvolvimento local)
 
-Os demais fluxos (agendamento pelo cliente final, painel de gestão de
-agendamentos e cobrança/assinatura) ainda não foram implementados — ver
-seção 8 do documento de especificação para o roadmap.
+Os demais fluxos (painel de gestão de agendamentos do profissional e
+cobrança/assinatura) ainda não foram implementados — ver seção 8 do
+documento de especificação para o roadmap.
 
 ## Backend
 
@@ -32,10 +38,12 @@ backend/
     security.py         # hash de senha e JWT
     deps.py              # dependência get_current_user
     utils.py              # geração de slug único
+    scheduling.py          # cálculo de horários livres (Fluxo 2)
+    notifications.py        # email de confirmação de agendamento
     routers/
       auth.py              # /auth/register, /auth/login, /auth/me
       onboarding.py         # /me/business-page (+ /services, /availability)
-      public.py               # /p/{slug} — página pública do profissional
+      public.py               # /p/{slug}, available-slots, appointments
 ```
 
 ### Rodando localmente
@@ -83,15 +91,20 @@ curl -X POST localhost:8000/me/business-page/availability -H "Authorization: Bea
 
 # 6. ver a página pública gerada
 curl localhost:8000/p/manu-cartomancia
+
+# 7. ver horários livres para um serviço em uma data (cliente final, sem login)
+curl "localhost:8000/p/manu-cartomancia/services/1/available-slots?data=2026-01-20"
+
+# 8. agendar (cliente final, sem login)
+curl -X POST localhost:8000/p/manu-cartomancia/appointments \
+  -H "Content-Type: application/json" \
+  -d '{"service_id":1,"data":"2026-01-20","hora_inicio":"09:00:00","cliente_nome":"Cliente","cliente_telefone":"11999999999","cliente_email":"cliente@example.com"}'
 ```
 
 ## Próximos passos
 
-1. **Fluxo 2** — endpoint público de agendamento: calcular horários livres
-   (disponibilidade - agendamentos - bloqueios) e criar `Appointment` sem
-   exigir login do cliente final; envio de email de confirmação.
-2. **Fluxo 3** — painel do profissional: listar/cancelar/remarcar
+1. **Fluxo 3** — painel do profissional: listar/cancelar/remarcar
    agendamentos, criar `BlockedSlot`.
-3. **Fluxo 4** — integração de cobrança (Stripe/Mercado Pago) e expiração de
+2. **Fluxo 4** — integração de cobrança (Stripe/Mercado Pago) e expiração de
    trial.
-4. Frontend (React + Vite + Tailwind) consumindo esta API.
+3. Frontend (React + Vite + Tailwind) consumindo esta API.
