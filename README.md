@@ -165,6 +165,55 @@ npm run dev
 O frontend sobe em `http://127.0.0.1:5173` e espera o backend rodando em
 `http://127.0.0.1:8000` (ajustável via `VITE_API_URL`).
 
+## Publicar (deploy) — sem precisar de computador
+
+Dá pra publicar o app com uma URL de verdade direto pelo navegador do
+celular, sem instalar nada: o **backend** vai pro [Render](https://render.com)
+e o **frontend** vai pro [Vercel](https://vercel.com). Os dois têm plano
+grátis e se conectam direto no repositório do GitHub.
+
+**Importante sobre o plano grátis do Render:** o disco não é permanente —
+se o servidor reiniciar (acontece de vez em quando no free tier), o banco
+SQLite (e os dados cadastrados) somem. Ótimo pra testar; se depois quiser
+usar de verdade, trocamos por um banco de verdade (também tem opção
+gratuita).
+
+### 1. Backend no Render
+
+1. Crie uma conta em [render.com](https://render.com) (dá pra logar com a
+   conta do GitHub).
+2. **New +** → **Blueprint**.
+3. Selecione o repositório `MVP-CLAUDE` — o Render vai encontrar o arquivo
+   [`render.yaml`](render.yaml) na raiz automaticamente e já preencher tudo
+   (build, start, variáveis de ambiente).
+4. Clique em **Apply** / **Create**. Espera o build terminar (alguns
+   minutos) e anota a URL que aparece (algo como
+   `https://agendafacil-backend.onrender.com`).
+
+### 2. Frontend no Vercel
+
+1. Crie uma conta em [vercel.com](https://vercel.com) (também dá pra logar
+   com o GitHub).
+2. **Add New** → **Project** → selecione o mesmo repositório `MVP-CLAUDE`.
+3. Em **Root Directory**, escolha `frontend` (o Vercel detecta o Vite
+   sozinho a partir do [`vercel.json`](frontend/vercel.json) que já está
+   no repo).
+4. Em **Environment Variables**, adicione:
+   - `VITE_API_URL` = a URL do backend que você anotou no passo anterior
+     (ex: `https://agendafacil-backend.onrender.com`)
+5. Clique em **Deploy**. Ao terminar, você recebe a URL final (algo como
+   `https://mvp-claude.vercel.app`) — é essa que você abre no celular.
+
+### 3. Última conexão: backend → frontend
+
+Volte no painel do Render, vá em **Environment** e troque a variável
+`FRONTEND_URL` pela URL do Vercel que você acabou de receber (ela começa
+com um valor de exemplo). Isso é o que faz o botão "Assinar agora" (Fluxo
+4) redirecionar pro lugar certo. Salvar já dispara um novo deploy
+automático.
+
+Pronto — abra a URL do Vercel no navegador do celular e o app está no ar.
+
 ## Próximos passos (roadmap pós-MVP)
 
 Ver seção 8 do documento de especificação: notificações via WhatsApp,
