@@ -2,7 +2,7 @@ from datetime import date, datetime, time
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
-from app.models import DiaSemana, Plano, StatusAssinatura, StatusAppointment
+from app.models import DiaSemana, Plano, StatusAppointment, StatusAssinatura
 
 
 # ---- Auth / User ----
@@ -29,6 +29,21 @@ class UserOut(BaseModel):
 class Token(BaseModel):
     access_token: str
     token_type: str = "bearer"
+
+
+# ---- Billing (Fluxo 4 - assinatura) ----
+
+
+class BillingStatusOut(BaseModel):
+    plano: Plano
+    status_assinatura: StatusAssinatura
+    trial_fim: datetime | None
+    dias_restantes_trial: int | None
+    assinatura_ativa: bool
+
+
+class CheckoutSessionOut(BaseModel):
+    checkout_url: str
 
 
 # ---- BusinessPage ----
@@ -114,5 +129,60 @@ class PublicBusinessPageOut(BaseModel):
     tema: str
     slug: str
     services: list[ServiceOut]
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+# ---- Appointment (Fluxo 2 - agendamento pelo cliente final) ----
+
+
+class AppointmentCreate(BaseModel):
+    service_id: int
+    data: date
+    hora_inicio: time
+    cliente_nome: str = Field(min_length=1, max_length=160)
+    cliente_telefone: str = Field(min_length=1, max_length=30)
+    cliente_email: EmailStr
+
+
+class AppointmentOut(BaseModel):
+    id: int
+    service_id: int
+    data: date
+    hora_inicio: time
+    hora_fim: time
+    cliente_nome: str
+    cliente_telefone: str
+    cliente_email: EmailStr
+    status: StatusAppointment
+    criado_em: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+# ---- Appointment management (Fluxo 3 - painel do profissional) ----
+
+
+class AppointmentReschedule(BaseModel):
+    data: date
+    hora_inicio: time
+
+
+# ---- BlockedSlot ----
+
+
+class BlockedSlotCreate(BaseModel):
+    data: date
+    hora_inicio: time
+    hora_fim: time
+    motivo: str | None = Field(default=None, max_length=255)
+
+
+class BlockedSlotOut(BaseModel):
+    id: int
+    data: date
+    hora_inicio: time
+    hora_fim: time
+    motivo: str | None
 
     model_config = ConfigDict(from_attributes=True)

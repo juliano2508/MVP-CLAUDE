@@ -1,0 +1,24 @@
+services:
+  - type: web
+    name: agendafacil-backend
+    runtime: python
+    plan: free
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DATABASE_URL
+        value: sqlite:///./agendafacil.db
+      - key: ACCESS_TOKEN_EXPIRE_MINUTES
+        value: "60"
+      - key: TRIAL_DAYS
+        value: "14"
+      # Troque pela URL do seu frontend no Vercel depois de publicá-lo
+      # (Settings -> Environment no Render), senão o botão "Assinar agora"
+      # do modo demo tenta redirecionar para localhost.
+      - key: FRONTEND_URL
+        value: https://troque-pela-url-do-seu-vercel.vercel.app
